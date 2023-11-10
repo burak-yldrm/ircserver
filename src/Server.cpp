@@ -144,7 +144,7 @@ int Server::socketAccept()
 
 	int clientSocketFD = accept(_serverSocketFD, (struct sockaddr *)&clientAddress, &clientAddressLength);
 
-	if (clientSocketFD == -1)
+	if (clientSocketFD < 0)
 	{
 		if (errno == EAGAIN || errno == EWOULDBLOCK)
 		{
@@ -152,8 +152,7 @@ int Server::socketAccept()
 		}
 		else
 		{
-			ErrorLogger(FAILED_SOCKET_ACCEPT, __FILE__, __LINE__);
-			return -1;
+			ErrorLogger(FAILED_SOCKET_ACCEPT, __FILE__, __LINE__, true);
 		}
 	}
 #if defined(__linux__)
@@ -176,7 +175,22 @@ int Server::socketAccept()
 		ErrorLogger(FAILED_SOCKET_KQUEUE_KEVENT, __FILE__, __LINE__);
 	}
 #endif
-	std::cout << "New client connected: " << clientSocketFD << std::endl;
+	// İstemci adresinden hostname alınması
+	char hostname[NI_MAXHOST];
+	if (getnameinfo((struct sockaddr *)&clientAddress, clientAddressLength, hostname, NI_MAXHOST, NULL, 0, NI_NUMERICSERV) != 0)
+	{
+		strcpy(hostname, "Unknown"); // Eğer hostname alınamazsa
+	}
+
+	// Yeni istemci nesnesinin oluşturulması ve saklanması
+	Client* client = new Client(clientSocketFD, ntohs(((struct sockaddr_in*)&clientAddress)->sin_port), hostname);
+	_clients.insert(std::make_pair(clientSocketFD, client));
+
+	// Bağlantı mesajının günlüğe kaydedilmesi
+	char message[1000];
+	snprintf(message, sizeof(message), "%s:%d has connected.", hostname, ntohs(((struct sockaddr_in*)&clientAddress)->sin_port));
+	log(message);
+
 	return clientSocketFD;
 }
 
@@ -195,8 +209,7 @@ void Server::handleClient(int clientSocketFD)
 		// Gelen mesaja göre eylem yapın (mesajı yorumlayın ve uygun komutları işleyin)
 	} else if (received == 0) {
 		// Istemci bağlantıyı kapattı.
-		std::cout << "Client " << clientSocketFD << " disconnected." << std::endl;
-		close(clientSocketFD); // Soketi kapatın.
+		clientDisconnect(clientSocketFD);
 		// Bağlantıyı istemci listesinden çıkarın (eğer varsa).
 	} else {
 		// Hata alındı.
@@ -208,7 +221,49 @@ void Server::handleClient(int clientSocketFD)
 	}
 }
 
+void Server::clientDisconnect(int clientSocketFD)
+{
+	try
+	{
+		std::map<int, Client*>::iterator it = _clients.find(clientSocketFD);
+		if (it == _clients.end()) {
+			std::cout << "Client with FD " << clientSocketFD << " not found." << std::endl;
+			return;
+		}
 
+		Client* client = it->second;
+
+		// İstemcinin ayrılması
+		client->leave();
+
+		// Bağlantının kesilmesi hakkında günlüğe kayıt
+		char message[1000];
+		sprintf(message, "%s:%d has disconnected!", client->getHostName().c_str(), client->getClientPort());
+		log(message);
+
+		// İstemciyi map'ten silme
+		_clients.erase(it);
+
+		// Soketi epoll veya kqueue'dan kaldırma
+#if defined(__linux__)
+		// epoll'dan kaldırma
+		epoll_ctl(epollFd, EPOLL_CTL_DEL, clientSocketFD, NULL);
+#elif defined(__APPLE__) || defined(__MACH__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined (__NetBSD__)
+		// kqueue'dan kaldırma
+		struct kevent evSet;
+		EV_SET(&evSet, clientSocketFD, EVFILT_READ, EV_DELETE, 0, 0, NULL);
+		kevent(kq, &evSet, 1, NULL, 0, NULL);
+#endif
+
+		// Soketi kapatma ve hafızayı serbest bırakma
+		close(clientSocketFD);
+		delete client;
+	}
+	catch (const std::exception &e)
+	{
+		std::cerr << "Error while disconnecting client: " << e.what() << std::endl;
+	}
+}
 
 void Server::serverRun()
 {
@@ -233,8 +288,11 @@ void Server::serverRun()
 					// Yeni bağlantıyı işleyin (örneğin, bir liste/map'e ekleyin)
 				}
 			} else {
-				// Mevcut bir istemciden veri alındı.
-				handleClient(events[i].data.fd);
+
+				if (events[i].events & EPOLLIN) {
+					// Okunabilir veri var, istemciyi işleyin
+					handleClient(events[i].data.fd);
+				}
 			}
 		}
 #elif defined(__APPLE__) || defined(__MACH__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined (__NetBSD__)

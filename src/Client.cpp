@@ -43,6 +43,10 @@ void Client::welcomeMessage()
 
 	_clientStatus = CLIENT_REGISTERED;
 	sendReply(WELCOME_MESSAGE(_nickName));
+
+	char buffer[100];
+	sprintf(buffer, "%s:%d is now known as %s.", _hostName.c_str(), _clientPort, _nickName.c_str());
+	log(buffer);
 }
 
 void Client::sendMessage( const string& message ) const
@@ -57,4 +61,9 @@ void Client::sendMessage( const string& message ) const
 void Client::sendReply( const string& reply ) const
 {
 	sendMessage(getPrefix() + " " + reply);
+}
+
+void Client::leave()
+{
+	_clientStatus = CLIENT_DISCONNECTED;
 }

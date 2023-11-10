@@ -83,6 +83,8 @@ public:
 	void sendMessage( const string& message ) const;
 	void sendReply( const string& reply ) const;
 
+	void leave();
+
 	
 };
 

@@ -10,6 +10,9 @@
 
 using namespace std;
 
+#define GET_CURRENT_TIME time(0)
+#define FORMAT_TIME(t, buffer) strftime(buffer, sizeof(buffer), "%d-%m-%Y %H:%M:%S", localtime(&t))
+
 /* SERVER FAILED/ERROR MESSAGES */
 #define FAILED_SOCKET "Failed to create socket"
 #define FAILED_SOCKET_OPTIONS "Failed to set socket options"
@@ -39,7 +42,7 @@ using namespace std;
 	/* REPLY */
 #define WELCOME_MESSAGE(source) "Welcome to the Internet Relay Network " + source + "!" + source + "@" + source
 
-inline void ErrorLogger( string messageInfo, const char* fileInfo, int lineInfo, bool isFatal = false )
+static inline void ErrorLogger( string messageInfo, const char* fileInfo, int lineInfo, bool isFatal = false )
 {
 	ofstream errorLog;
 
@@ -54,6 +57,23 @@ inline void ErrorLogger( string messageInfo, const char* fileInfo, int lineInfo,
 		throw runtime_error(messageInfo);
 	}
 	cerr << "Error: " << messageInfo << endl;
+}
+
+static inline void log( const string& message )
+{
+	char buffer[100];
+	time_t currentTime = GET_CURRENT_TIME;
+	ofstream logFile;
+
+	FORMAT_TIME(currentTime, buffer);
+	string time(buffer);
+
+	logFile.open("log.log", ios::app);
+	logFile << time << " " << message << endl;
+	logFile.close();
+
+	std::cout << "\033[0;34m[" << time << "]\033[0m ";
+	std::cout << message << std::endl;
 }
 
 #endif
