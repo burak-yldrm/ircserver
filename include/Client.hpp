@@ -73,7 +73,7 @@ public:
 
 	bool isRegistered() const { return _clientStatus == CLIENT_REGISTERED; }
 
-	Chanel* getChanel() const { return _chanel }
+	Chanel* getChanel() const { return _chanel; }
 
 	/* SETTERS */
 	void setNickName( const string& nickName );
