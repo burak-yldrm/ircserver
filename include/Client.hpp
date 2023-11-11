@@ -12,6 +12,7 @@
 #include <iostream>
 
 #include "Utils.hpp"
+#include "Chanel.hpp"
 
 using namespace std;
 
@@ -35,6 +36,7 @@ private:
 	string _hostName;
 
 	ClientStatus _clientStatus;
+	Chanel* _chanel;
 
 	Client();
 	Client( const Client& copy );
@@ -76,6 +78,7 @@ public:
 	void setUserName( const string& userName );
 	void setRealName( const string& realName ) { _realName = realName; }
 	void setStatus( ClientStatus clientStatus ) { _clientStatus = clientStatus; }
+	void setChanel( Chanel* chanel ) { _chanel = chanel; }
 
 	/* ACTIONS */
 	void welcomeMessage();

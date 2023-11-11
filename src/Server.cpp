@@ -187,8 +187,9 @@ int Server::socketAccept()
 	_clients.insert(std::make_pair(clientSocketFD, client));
 
 	// Bağlantı mesajının günlüğe kaydedilmesi
-	char message[1000];
-	snprintf(message, sizeof(message), "%s:%d has connected.", hostname, ntohs(((struct sockaddr_in*)&clientAddress)->sin_port));
+	char message[2028];
+	sprintf(message, "%s:%d has connected.", hostname, ntohs(((struct sockaddr_in*)&clientAddress)->sin_port));
+
 	log(message);
 
 	return clientSocketFD;
@@ -204,9 +205,16 @@ void Server::handleClient(int clientSocketFD)
 	if (received > 0) {
 		// Veriyi aldık, işlememiz gerekiyor.
 		// Örneğin, buffer'daki komutları ayrıştırabilir ve cevaplayabiliriz.
-		std::cout << "Received message from client " << clientSocketFD << ": " << buffer << std::endl;
+		std::cout << "Received message from client " << clientSocketFD << ": " << buffer;
 
 		// Gelen mesaja göre eylem yapın (mesajı yorumlayın ve uygun komutları işleyin)
+		// İstemciye cevap gönder
+		const char* response = "Mesajınız alındı\n";
+		ssize_t sent = send(clientSocketFD, response, strlen(response), 0);
+		if (sent == -1) {
+			// Gönderme hatası
+			std::cerr << "Error sending response to client." << std::endl;
+		}
 	} else if (received == 0) {
 		// Istemci bağlantıyı kapattı.
 		clientDisconnect(clientSocketFD);
