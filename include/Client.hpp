@@ -12,7 +12,7 @@
 #include <iostream>
 
 #include "Utils.hpp"
-#include "Chanel.hpp"
+#include "Channel.hpp"
 
 using namespace std;
 
@@ -23,6 +23,8 @@ enum ClientStatus
 	CLIENT_REGISTERED,
 	CLIENT_DISCONNECTED
 };
+
+class Channel;
 
 class Client
 {
@@ -36,7 +38,7 @@ private:
 	string _hostName;
 
 	ClientStatus _clientStatus;
-	Chanel* _chanel;
+	Channel* _channel;
 
 	Client();
 	Client( const Client& copy );
@@ -73,14 +75,18 @@ public:
 
 	bool isRegistered() const { return _clientStatus == CLIENT_REGISTERED; }
 
+<<<<<<< HEAD
 	Chanel* getChanel() const { return _chanel; }
+=======
+	Channel* getChannel() const { return _channel; }
+>>>>>>> c66bee7 (Dosya adlarındaki hatalar düzeltildi.)
 
 	/* SETTERS */
 	void setNickName( const string& nickName );
 	void setUserName( const string& userName );
 	void setRealName( const string& realName ) { _realName = realName; }
 	void setStatus( ClientStatus clientStatus ) { _clientStatus = clientStatus; }
-	void setChanel( Chanel* chanel ) { _chanel = chanel; }
+	void setChannel( Channel* chanel ) { _channel = chanel; }
 
 	/* ACTIONS */
 	void welcomeMessage();

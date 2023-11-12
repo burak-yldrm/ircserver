@@ -179,12 +179,15 @@ int Server::socketAccept()
 	char hostname[NI_MAXHOST];
 	if (getnameinfo((struct sockaddr *)&clientAddress, clientAddressLength, hostname, NI_MAXHOST, NULL, 0, NI_NUMERICSERV) != 0)
 	{
-		strcpy(hostname, "Unknown"); // Eğer hostname alınamazsa
+		ErrorLogger(FAILED_SOCKET_GETADDRINFO, __FILE__, __LINE__, true);
 	}
 
 	// Yeni istemci nesnesinin oluşturulması ve saklanması
 	Client* client = new Client(clientSocketFD, ntohs(((struct sockaddr_in*)&clientAddress)->sin_port), hostname);
 	_clients.insert(std::make_pair(clientSocketFD, client));
+
+	send(clientSocketFD, ">", 2, 0);
+
 
 	// Bağlantı mesajının günlüğe kaydedilmesi
 	char message[2028];
@@ -208,13 +211,14 @@ void Server::handleClient(int clientSocketFD)
 		std::cout << "Received message from client " << clientSocketFD << ": " << buffer;
 
 		// Gelen mesaja göre eylem yapın (mesajı yorumlayın ve uygun komutları işleyin)
-		// İstemciye cevap gönder
-		const char* response = "Mesajınız alındı\n";
-		ssize_t sent = send(clientSocketFD, response, strlen(response), 0);
-		if (sent == -1) {
-			// Gönderme hatası
-			std::cerr << "Error sending response to client." << std::endl;
+		if (strcmp(buffer, "quit\n") == 0) {
+			// İstemciyi kapatın
+			clientDisconnect(clientSocketFD);
+			return;
 		}
+		// İstemciye cevap gönder
+		send(clientSocketFD, ">", 2, 0);
+
 	} else if (received == 0) {
 		// Istemci bağlantıyı kapattı.
 		clientDisconnect(clientSocketFD);
@@ -296,7 +300,6 @@ void Server::serverRun()
 					// Yeni bağlantıyı işleyin (örneğin, bir liste/map'e ekleyin)
 				}
 			} else {
-
 				if (events[i].events & EPOLLIN) {
 					// Okunabilir veri var, istemciyi işleyin
 					handleClient(events[i].data.fd);
@@ -314,8 +317,10 @@ void Server::serverRun()
 					// Yeni bağlantıyı işleyin (örneğin, bir liste/map'e ekleyin)
 				}
 			} else {
-				// Mevcut bir istemciden veri alındı.
-				handleClient(evList[i].ident);
+				if (evList[i].filter == EVFILT_READ) {
+					// Mevcut bir istemciden veri alındı.
+					handleClient(evList[i].ident);
+				}
 			}
 		}
 #endif

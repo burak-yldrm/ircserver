@@ -39,7 +39,10 @@ void Client::setUserName( const string& userName ) {
 void Client::welcomeMessage()
 {
 	if ( _clientStatus != CLIENT_CONNECTED || _nickName.empty() || _userName.empty() || _realName.empty() )
+	{
+		sendReply("ERROR :Closing Link: " + _hostName + " (Invalid nickname or username)");
 		return;
+	}
 
 	_clientStatus = CLIENT_REGISTERED;
 	sendReply(WELCOME_MESSAGE(_nickName));

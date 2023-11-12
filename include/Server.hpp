@@ -17,6 +17,7 @@
 
 #include "Utils.hpp"
 #include "Client.hpp"
+#include "Channel.hpp"
 
 class Client;
 

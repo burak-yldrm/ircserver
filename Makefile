@@ -3,7 +3,7 @@ CC = g++
 
 FLAGS = -Wall -Wextra -Werror -std=c++98 -pedantic -g
 
-SRCS = main.cpp src/Server.cpp src/Client.cpp
+SRCS = main.cpp src/Server.cpp src/Client.cpp src/Channel.cpp
 
 OBJS = $(SRCS:.cpp=.o)
 
